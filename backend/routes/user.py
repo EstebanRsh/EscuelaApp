@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Request, Query
+from fastapi import APIRouter, Request, Query, Depends
 from fastapi.responses import JSONResponse
 from models.modelo import (
-    session,
+    get_db,
     User,
     UserDetail,
     PivoteUserCareer,
@@ -9,7 +9,7 @@ from models.modelo import (
     InputLogin,
     InputUserAddCareer,
 )
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import Session, joinedload
 from auth.security import Security
 from typing import Optional
 
@@ -24,13 +24,11 @@ def helloUser():
 
 @user.get("/users/all")
 ### funcion helloUer documentacion
-def getAllUsers(req: Request):
+def getAllUsers(req: Request, db: Session = Depends(get_db)):
     try:
         has_access = Security.verify_token(req.headers)
         if "iat" in has_access:
-            usersWithDetail = (
-                session.query(User).options(joinedload(User.userdetail)).all()
-            )
+            usersWithDetail = db.query(User).options(joinedload(User.userdetail)).all()
             usuarios_con_detalle = []
             for user in usersWithDetail:
                 user_con_detalle = {
@@ -58,14 +56,13 @@ def getUsersPaginated(
     req: Request,
     limit: int = Query(20, gt=0, le=100),
     last_seen_id: Optional[int] = Query(None),
+    db: Session = Depends(get_db),
 ):
     try:
         has_access = Security.verify_token(req.headers)
         if "iat" in has_access:
             query = (
-                session.query(User)
-                .options(joinedload(User.userdetail))
-                .order_by(User.id)
+                db.query(User).options(joinedload(User.userdetail)).order_by(User.id)
             )
 
             if last_seen_id is not None:
@@ -106,8 +103,8 @@ def getUsersPaginated(
 
 @user.get("/users/{us}/{pw}")
 ### funcion helloUer documentacion
-def loginUser(us: str, pw: str):
-    usu = session.query(User).filter(User.username == us).first()
+def loginUser(us: str, pw: str, db: Session = Depends(get_db)):
+    usu = db.query(User).filter(User.username == us).first()
     if usu is None:
         return "Usuario no encontrado!"
     if usu.password == pw:
@@ -117,25 +114,23 @@ def loginUser(us: str, pw: str):
 
 
 @user.post("/users/add")
-def create_user(us: InputUser):
+def create_user(us: InputUser, db: Session = Depends(get_db)):
     try:
         newUser = User(us.username, us.password)
         newUserDetail = UserDetail(us.firstname, us.lastname, us.dni, us.type, us.email)
         newUser.userdetail = newUserDetail
-        session.add(newUser)
-        session.commit()
+        db.add(newUser)
+        db.commit()
         return "Usuario creado con éxito!"
     except Exception as ex:
-        session.rollback()
+        db.rollback()
         print("Error ---->> ", ex)
-    finally:
-        session.close()
 
 
 @user.post("/users/login")
-def login_user(us: InputLogin):
+def login_user(us: InputLogin, db: Session = Depends(get_db)):
     try:
-        user = session.query(User).filter(User.username == us.username).first()
+        user = db.query(User).filter(User.username == us.username).first()
         if user and user.password == us.password:
             tkn = Security.generate_token(user)
             if not tkn:
@@ -157,34 +152,30 @@ def login_user(us: InputLogin):
             return res
     except Exception as ex:
         print("Error ---->> ", ex)
-    finally:
-        session.close()
 
 
 ## Inscribir un alumno a una carrera
 @user.post("/user/addcareer")
-def addCareer(ins: InputUserAddCareer):
+def addCareer(ins: InputUserAddCareer, db: Session = Depends(get_db)):
     try:
         newInsc = PivoteUserCareer(ins.id_user, ins.id_career)
-        session.add(newInsc)
-        session.commit()
+        db.add(newInsc)
+        db.commit()
         res = f"{newInsc.user.userdetail.first_name} {newInsc.user.userdetail.last_name} fue inscripto correctamente a {newInsc.career.name}"
         print(res)
         return res
     except Exception as ex:
-        session.rollback()
+        db.rollback()
         print("Error al inscribir al alumno:", ex)
         import traceback
 
         traceback.print_exc()
-    finally:
-        session.close()
 
 
 @user.get("/user/career/{_username}")
-def get_career_user(_username: str):
+def get_career_user(_username: str, db: Session = Depends(get_db)):
     try:
-        userEncontrado = session.query(User).filter(User.username == _username).first()
+        userEncontrado = db.query(User).filter(User.username == _username).first()
         arraySalida = []
         if userEncontrado:
             pivoteusercareer = userEncontrado.pivoteusercareer
@@ -198,7 +189,5 @@ def get_career_user(_username: str):
         else:
             return "Usuario no encontrado!"
     except Exception as ex:
-        session.rollback()
+        db.rollback()
         print("Error al traer usuario y/o pagos")
-    finally:
-        session.close()

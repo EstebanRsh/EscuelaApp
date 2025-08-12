@@ -1,0 +1,31 @@
+select * from "user"
+select count(*) from "user"
+select * from "userdetail"
+select count(*) from "userdetail"
+
+INSERT INTO "user" (username, password)
+SELECT
+  'user' || generate_series(1, 10000) AS username,
+  '123' AS password;
+ 
+INSERT INTO userdetail (
+  first_name,
+  last_name,
+  dni,
+  type,
+  email
+)
+SELECT
+  'Nombre' || gs AS first_name,
+  'Apellido' || gs AS last_name,
+  10000000 + gs AS dni,
+  'alumno' AS type,
+  'usuario' || gs || '@escaloneta.com' AS email
+FROM generate_series(1, 10000) AS gs;
+
+UPDATE "user"
+SET id_userdetail = id
+WHERE id_userdetail IS NULL;
+
+delete from "user" where id>7
+delete from "userdetail" where id>7
