@@ -1,0 +1,12 @@
+# Carpetas de caché de Python generadas automáticamente
+__pycache__/
+
+# Archivos compilados de Python
+*.pyc
+*.pyo
+*.pyd
+
+# Carpetas de entorno virtual (incluyendo conda)
+venv/
+.venv/
+env/
