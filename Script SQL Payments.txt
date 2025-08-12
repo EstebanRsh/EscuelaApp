@@ -1,0 +1,12 @@
+SELECT * FROM "payment";
+SELECT count(*) FROM "payment";
+
+-- Insertar 100000 registros de prueba en "payment"
+INSERT INTO "payment" (id_user, id_career, amount, affected_month)
+SELECT
+  generate_series(1, 10000) AS id_user,
+  1 AS id_career,
+  15000 AS amount,
+  NOW()::date AS affected_month;
+
+DELETE FROM "payment" WHERE id > 50;
