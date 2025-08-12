@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship
 from pydantic import BaseModel
 import datetime
+from typing import Optional
 
 
 # region Modelos SQLAlchemy
@@ -119,6 +120,11 @@ class InputPayment(BaseModel):
 class InputUserAddCareer(BaseModel):
     id_user: int
     id_career: int
+
+
+class InputPaginatedRequest(BaseModel):
+    limit: int = 10
+    last_seen_id: Optional[int] = None
 
 
 # endregion

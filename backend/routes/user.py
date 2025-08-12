@@ -8,6 +8,7 @@ from models.modelo import (
     InputUser,
     InputLogin,
     InputUserAddCareer,
+    InputPaginatedRequest,
 )
 from sqlalchemy.orm import Session, joinedload
 from auth.security import Security
@@ -50,6 +51,7 @@ def getAllUsers(req: Request, db: Session = Depends(get_db)):
         return {"message": "Error al obtener los usuarios"}
 
 
+"""
 @user.get("/users/paginated")
 ### funcion helloUer documentacion
 def getUsersPaginated(
@@ -96,6 +98,54 @@ def getUsersPaginated(
             )
         else:
             return JSONResponse(status_code=401, content=has_access)
+    except Exception as ex:
+        print("Error al obtener página de usuarios---->> ", ex)
+        return {"message": "Error al obtener página de usuarios"}
+"""
+
+
+@user.post("/users/paginated")
+### funcion helloUer documentacion
+async def get_Users_Paginated(
+    req: Request,
+    body: InputPaginatedRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        has_access = Security.verify_token(req.headers)
+        if "iat" not in has_access:
+            return JSONResponse(status_code=401, content=has_access)
+
+        limit = body.limit
+        last_seen_id = body.last_seen_id
+        query = db.query(User).options(joinedload(User.userdetail)).order_by(User.id)
+        if last_seen_id is not None:
+            query = query.filter(User.id > last_seen_id)
+        users_with_detail = query.limit(limit).all()
+
+        usuarios_con_detalle = []
+        for user in users_with_detail:
+            user_con_detalle = {
+                "id": user.id,
+                "username": user.username,
+                "password": user.password,
+                "first_name": user.userdetail.first_name,
+                "last_name": user.userdetail.last_name,
+                "dni": user.userdetail.dni,
+                "type": user.userdetail.type,
+                "email": user.userdetail.email,
+            }
+            usuarios_con_detalle.append(user_con_detalle)
+        next_cursor = (
+            usuarios_con_detalle[-1]["id"]
+            if len(usuarios_con_detalle) == limit
+            else None
+        )
+        return JSONResponse(
+            status_code=200,
+            content={"users": usuarios_con_detalle, "next_cursor": next_cursor},
+        )
+
     except Exception as ex:
         print("Error al obtener página de usuarios---->> ", ex)
         return {"message": "Error al obtener página de usuarios"}

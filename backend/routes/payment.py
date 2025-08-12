@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Query, Depends
+from fastapi import APIRouter, Query, Depends, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
-from models.modelo import Payment, InputPayment, User, get_db
+from models.modelo import Payment, InputPayment, User, get_db, InputPaginatedRequest
+from auth.security import Security
 from sqlalchemy.orm import joinedload
 from typing import Optional
 import traceback
@@ -27,6 +28,7 @@ def get_payments(db: Session = Depends(get_db)):
     ##return session.query(Payment).options(joinedload(Payment.user)).userdetail
 
 
+"""
 @payment.get("/payment/paginated")
 def get_payments_paginated(
     limit: int = Query(20, gt=0, le=100),
@@ -70,6 +72,73 @@ def get_payments_paginated(
             }
             payments_detailed.append(result)
             next_cursor = None
+        if payments_detailed and len(payments_detailed) == limit:
+            next_cursor = payments_detailed[-1]["id_pago"]
+
+        return JSONResponse(
+            status_code=200,
+            content={"payments": payments_detailed, "next_cursor": next_cursor},
+        )
+    except Exception as ex:
+        traceback.print_exc()
+        return JSONResponse(
+            status_code=500, content={"message": "Error interno al procesar los pagos"}
+        )
+"""
+
+
+@payment.post("/payment/paginated")
+def get_payments_paginated(
+    req: Request,
+    body: InputPaginatedRequest,
+    db: Session = Depends(get_db),
+):
+    try:
+        # 1. Añadimos la verificación de seguridad
+        has_access = Security.verify_token(req.headers)
+        if "iat" not in has_access:
+            return JSONResponse(status_code=401, content=has_access)
+
+        # 2. Obtenemos los parámetros desde el body
+        limit = body.limit
+        last_seen_id = body.last_seen_id
+
+        # 3. La lógica de la consulta es la que ya tenías
+        query = (
+            db.query(Payment)
+            .options(
+                joinedload(Payment.user).joinedload(User.userdetail),
+                joinedload(Payment.career),
+            )
+            .order_by(Payment.id)
+        )
+
+        if last_seen_id is not None:
+            query = query.filter(Payment.id > last_seen_id)
+
+        payments_page = query.limit(limit).all()
+
+        payments_detailed = []
+        for pay in payments_page:
+            result = {
+                "id_pago": pay.id,
+                "monto": pay.amount,
+                "fecha_pago": pay.created_at.isoformat() if pay.created_at else None,
+                "mes_pagado": (
+                    pay.affected_month.isoformat() if pay.affected_month else None
+                ),
+                "alumno": (
+                    f"{pay.user.userdetail.first_name} {pay.user.userdetail.last_name}"
+                    if pay.user and pay.user.userdetail
+                    else "Dato no disponible"
+                ),
+                "carrera_afectada": (
+                    pay.career.name if pay.career else "Dato no disponible"
+                ),
+            }
+            payments_detailed.append(result)
+
+        next_cursor = None
         if payments_detailed and len(payments_detailed) == limit:
             next_cursor = payments_detailed[-1]["id_pago"]
 
