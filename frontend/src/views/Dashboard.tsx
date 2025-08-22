@@ -1,71 +1,167 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+
+type User = {
+  id: number;
+  username: string;
+  first_name: string;
+  last_name: string;
+  type: string;
+  email: string;
+  [key: string]: any;
+};
 
 function Dashboard() {
-  const userName = JSON.parse(localStorage.getItem("user") || "{}").first_name;
+  const userName =
+    JSON.parse(localStorage.getItem("user") || "{}").first_name || "Usuario";
 
   const BACKEND_IP = "localhost";
   const BACKEND_PORT = "8000";
-  const ENDPOINT = "users/all";
-  const LOGIN_URL = `http://${BACKEND_IP}:${BACKEND_PORT}/${ENDPOINT}`;
+  const ENDPOINT = "user/paginated";
+  const URL = `http://${BACKEND_IP}:${BACKEND_PORT}/${ENDPOINT}`;
 
-  type User = { username: string; [key: string]: any };
   const [data, setData] = useState<User[]>([]);
+  const [nextCursor, setNextCursor] = useState<number | null>(0);
+  const [loading, setLoading] = useState(false);
 
-  function mostrar_datos(data: any) {
-    console.log("data", data);
-    if (!data.message) setData(data);
-    else setData([]);
-  }
+  // Evitar llamadas simultáneas por scroll
+  const loadingRef = useRef(false);
 
-  function get_users_all() {
-    const token =
-      "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NTAyMDMxMjAsImV4cCI6MTc1MDIzMTkyMCwidXNlcm5hbWUiOiJsaW9lc2NhbG9uaSJ9.E8dJhstJGyWta28rhXwzlXigAUENOGEYXdR9N7M63oI";
+  async function getUsersPag(limit: number, last_seen_id: number | null) {
+    const token = localStorage.getItem("token");
 
-    var myHeaders = new Headers();
-    myHeaders.append("Authorization", `Bearer ${token}`);
-    myHeaders.append("Content-Type", "application/json");
+    if (!token) {
+      console.error("No token found");
+      return;
+    }
 
-    const requestOptions = {
-      method: "GET",
-      headers: myHeaders,
-    };
+    if (loadingRef.current) return; // ya está cargando
 
-    fetch(LOGIN_URL, requestOptions)
-      .then((respond) => respond.json())
-      .then((data) => mostrar_datos(data))
-      .catch((error) => console.log("error", error));
+    loadingRef.current = true;
+    setLoading(true);
+
+    try {
+      const res = await fetch(URL, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ limit, last_seen_id }),
+      });
+
+      const json = await res.json();
+
+      if (json.message) {
+        console.error("Error:", json.message);
+        setLoading(false);
+        loadingRef.current = false;
+        return;
+      }
+
+      if (!last_seen_id) {
+        setData(json.users);
+      } else {
+        setData((prev) => [...prev, ...json.users]);
+      }
+
+      setNextCursor(json.next_cursor);
+    } catch (error) {
+      console.error("Fetch error:", error);
+    } finally {
+      setLoading(false);
+      loadingRef.current = false;
+    }
   }
 
   useEffect(() => {
-    get_users_all();
+    getUsersPag(20, 0);
   }, []);
+
+  // Ref del div scrollable
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  function handleScroll() {
+    if (!scrollContainerRef.current || loadingRef.current || !nextCursor)
+      return;
+
+    const { scrollTop, scrollHeight, clientHeight } =
+      scrollContainerRef.current;
+
+    // Cuando quedan menos de 100px para el final
+    if (scrollHeight - scrollTop - clientHeight < 100) {
+      getUsersPag(20, nextCursor);
+    }
+  }
 
   return (
     <div>
       <h2>Dashboard</h2>
       <div>Bienvenido {userName}!</div>
-      <table className="table-primary">
-        <thead>
-          <td>NOMRBE</td>
-          <td>APELLIDO</td>
-          <td>TIPO</td>
-          <td>EMAIL</td>
-        </thead>
-        <tbody>
-          {data.map((pepe) => {
-            return (
-              <tr key={pepe.id}>
-                <td>{pepe.first_name}</td>
-                <td>{pepe.last_name}</td>
-                <td>{pepe.type}</td>
-                <td>{pepe.email}</td>
+
+      {/* Contenedor con scroll y altura fija */}
+      <div
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        style={{
+          height: 400,
+          overflowY: "auto",
+          border: "1px solid #ccc",
+          marginTop: 10,
+        }}
+      >
+        <table
+          className="table-primary"
+          style={{ width: "100%", borderCollapse: "collapse" }}
+        >
+          <thead>
+            <tr>
+              <th>NOMBRE</th>
+              <th>APELLIDO</th>
+              <th>TIPO</th>
+              <th>EMAIL</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((user) => (
+              <tr key={user.id}>
+                <td>{user.first_name}</td>
+                <td>{user.last_name}</td>
+                <td>{user.type}</td>
+                <td>{user.email}</td>
               </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      <div>
-        <button onClick={get_users_all}>Recargar datos</button>
+            ))}
+          </tbody>
+        </table>
+        {loading && (
+          <div style={{ textAlign: "center", padding: "10px" }}>
+            Cargando...
+          </div>
+        )}
+        {!nextCursor && !loading && (
+          <div style={{ textAlign: "center", padding: "10px" }}>
+            No hay más usuarios
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginTop: 20 }}>
+        <button
+          onClick={() => getUsersPag(20, nextCursor ?? 0)}
+          disabled={loading || !nextCursor}
+        >
+          {loading
+            ? "Cargando..."
+            : nextCursor
+            ? "Cargar más"
+            : "No hay más usuarios"}
+        </button>
+        <button
+          onClick={() => getUsersPag(20, 0)}
+          disabled={loading}
+          style={{ marginLeft: 10 }}
+        >
+          Recargar datos
+        </button>
       </div>
     </div>
   );
