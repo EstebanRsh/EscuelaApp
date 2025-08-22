@@ -16,7 +16,7 @@ function Dashboard() {
 
   const BACKEND_IP = "localhost";
   const BACKEND_PORT = "8000";
-  const ENDPOINT = "user/paginated";
+  const ENDPOINT = "users/paginated";
   const URL = `http://${BACKEND_IP}:${BACKEND_PORT}/${ENDPOINT}`;
 
   const [data, setData] = useState<User[]>([]);
