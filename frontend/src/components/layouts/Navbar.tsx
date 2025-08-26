@@ -8,18 +8,12 @@ function handleLogout() {
 function Navbar() {
   return (
     <nav style={{ padding: "1rem", background: "#f0f0f0" }}>
-      <NavLink
-        to="/dashboard"
-        style={{ marginRight: "1rem" }}
-        title="Dashboard"
-      >
-        Dashboard
+      <NavLink to="/nativo" style={{ marginRight: "1rem" }} title="Nativo">
+        Infinite simple
       </NavLink>
-      <NavLink to="/profile" style={{ marginRight: "1rem" }}>
-        Profile
-      </NavLink>
-      <NavLink to="/notifications" style={{ marginRight: "1rem" }}>
-        notifications
+
+      <NavLink to="/virtualizado" style={{ marginRight: "1rem" }}>
+        Infinite Virtualizado
       </NavLink>
       <NavLink to="/login" onClick={handleLogout}>
         Logout

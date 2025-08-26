@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type User = {
   id: number;
@@ -10,34 +10,23 @@ type User = {
   [key: string]: any;
 };
 
-function Dashboard() {
-  const userName =
-    JSON.parse(localStorage.getItem("user") || "{}").first_name || "Usuario";
-
+function Nativo() {
   const BACKEND_IP = "localhost";
   const BACKEND_PORT = "8000";
-  const ENDPOINT = "users/paginated";
+  const ENDPOINT = "user/paginated";
   const URL = `http://${BACKEND_IP}:${BACKEND_PORT}/${ENDPOINT}`;
 
   const [data, setData] = useState<User[]>([]);
   const [nextCursor, setNextCursor] = useState<number | null>(0);
-  const [loading, setLoading] = useState(false);
 
-  // Evitar llamadas simultáneas por scroll
   const loadingRef = useRef(false);
 
   async function getUsersPag(limit: number, last_seen_id: number | null) {
     const token = localStorage.getItem("token");
+    if (!token) return;
 
-    if (!token) {
-      console.error("No token found");
-      return;
-    }
-
-    if (loadingRef.current) return; // ya está cargando
-
+    if (loadingRef.current) return;
     loadingRef.current = true;
-    setLoading(true);
 
     try {
       const res = await fetch(URL, {
@@ -50,25 +39,23 @@ function Dashboard() {
       });
 
       const json = await res.json();
-
       if (json.message) {
         console.error("Error:", json.message);
-        setLoading(false);
-        loadingRef.current = false;
         return;
       }
 
-      if (!last_seen_id) {
-        setData(json.users);
-      } else {
-        setData((prev) => [...prev, ...json.users]);
-      }
+      //funcion que devuelve los datos a setear en data segun el last_seen_id
+      const pepe = (prev: any) => {
+        if (!last_seen_id) return json.users;
+        else return [...prev, ...json.users];
+      };
+
+      setData(pepe);
 
       setNextCursor(json.next_cursor);
-    } catch (error) {
-      console.error("Fetch error:", error);
+    } catch (err) {
+      console.error("Fetch error:", err);
     } finally {
-      setLoading(false);
       loadingRef.current = false;
     }
   }
@@ -77,17 +64,18 @@ function Dashboard() {
     getUsersPag(20, 0);
   }, []);
 
-  // Ref del div scrollable
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   function handleScroll() {
     if (!scrollContainerRef.current || loadingRef.current || !nextCursor)
       return;
 
-    const { scrollTop, scrollHeight, clientHeight } =
-      scrollContainerRef.current;
+    const {
+      scrollTop,
+      scrollHeight,
+      clientHeight,
+    } = scrollContainerRef.current;
 
-    // Cuando quedan menos de 100px para el final
     if (scrollHeight - scrollTop - clientHeight < 100) {
       getUsersPag(20, nextCursor);
     }
@@ -95,10 +83,8 @@ function Dashboard() {
 
   return (
     <div>
-      <h2>Dashboard</h2>
-      <div>Bienvenido {userName}!</div>
+      <h2>Nativo</h2>
 
-      {/* Contenedor con scroll y altura fija */}
       <div
         ref={scrollContainerRef}
         onScroll={handleScroll}
@@ -132,12 +118,14 @@ function Dashboard() {
             ))}
           </tbody>
         </table>
-        {loading && (
+
+        {/* usamos directamente loadingRef.current para la UI */}
+        {loadingRef.current && (
           <div style={{ textAlign: "center", padding: "10px" }}>
             Cargando...
           </div>
         )}
-        {!nextCursor && !loading && (
+        {!nextCursor && !loadingRef.current && (
           <div style={{ textAlign: "center", padding: "10px" }}>
             No hay más usuarios
           </div>
@@ -147,9 +135,9 @@ function Dashboard() {
       <div style={{ marginTop: 20 }}>
         <button
           onClick={() => getUsersPag(20, nextCursor ?? 0)}
-          disabled={loading || !nextCursor}
+          disabled={loadingRef.current || !nextCursor}
         >
-          {loading
+          {loadingRef.current
             ? "Cargando..."
             : nextCursor
             ? "Cargar más"
@@ -157,7 +145,7 @@ function Dashboard() {
         </button>
         <button
           onClick={() => getUsersPag(20, 0)}
-          disabled={loading}
+          disabled={loadingRef.current}
           style={{ marginLeft: 10 }}
         >
           Recargar datos
@@ -167,4 +155,4 @@ function Dashboard() {
   );
 }
 
-export default Dashboard;
+export default Nativo;

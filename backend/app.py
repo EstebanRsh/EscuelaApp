@@ -1,5 +1,4 @@
 import sys
-
 sys.tracebacklimit = 1
 from fastapi import FastAPI
 from routes.user import user
@@ -21,4 +20,3 @@ api_escu.add_middleware(
     allow_headers=["*"],
 )
 
-# uvicorn app:api_escu --reload

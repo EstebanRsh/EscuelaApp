@@ -6,9 +6,8 @@ import ProtectedRoutes from "./components/router/ProtectedRoutes";
 import MainLayout from "./components/layouts/MainLayout";
 
 function App() {
-  const Dashboard = lazy(() => import("./views/Dashboard"));
-  const Notifications = lazy(() => import("./views/Notifications"));
-  const Profile = lazy(() => import("./views/Profile"));
+  const Nativo = lazy(() => import("./views/Nativo"));
+  const Virtualizado = lazy(() => import("./views/Virtualizado"));
 
   return (
     <BrowserRouter>
@@ -20,9 +19,8 @@ function App() {
 
         <Route element={<ProtectedRoutes />}>
           <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/notifications" element={<Notifications />} />
+            <Route path="/nativo" element={<Nativo />} />
+            <Route path="/virtualizado" element={<Virtualizado />} />
           </Route>
         </Route>
       </Routes>

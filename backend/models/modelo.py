@@ -1,9 +1,9 @@
 from configs.db import engine, Base
 from sqlalchemy import Column, Integer, String, DateTime, ForeignKey
 from sqlalchemy.orm import sessionmaker, relationship
-from pydantic import BaseModel
 import datetime
-from typing import Optional
+from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field
 
 
 # region Modelos SQLAlchemy
@@ -123,23 +123,54 @@ class InputUserAddCareer(BaseModel):
 
 
 class InputPaginatedRequest(BaseModel):
-    limit: int = 10
+    limit: int = 20
     last_seen_id: Optional[int] = None
+
+
+from typing import Optional, Dict, Any
+from pydantic import BaseModel, Field
+
+
+class InputPaginatedRequestFilter(BaseModel):
+    limit: int = Field(
+        20, gt=0, le=100, description="Cantidad máxima de registros a retornar"
+    )
+    last_seen_id: Optional[int] = Field(
+        None, description="ID del último registro visto (cursor) para keyset pagination"
+    )
+    filter: Optional[Dict[str, Any]] = Field(
+        None, description="Filtros opcionales de búsqueda"
+    )
 
 
 # endregion
 
 # region configuraciones
+
+# ======================
+# Configuración de DB
+# ======================
 Base.metadata.create_all(bind=engine)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+Session = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+session = Session()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# ======================
+# (Opcional) Config async para el futuro
+# ======================
+"""
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+
+ASYNC_DATABASE_URL = "postgresql+asyncpg://user:pass@localhost/dbname"
+
+async_engine = create_async_engine(ASYNC_DATABASE_URL, echo=True)
+
+AsyncSessionLocal = sessionmaker(
+    bind=async_engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+"""
 
 
 # endregion
