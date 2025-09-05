@@ -4,7 +4,7 @@ function PublicRoutes() {
   const token = localStorage.getItem("token");
 
   if (token) {
-    return <Navigate to="/nativo" />;
+    return <Navigate to="/virtualizado" />;
   }
 
   return <Outlet />;

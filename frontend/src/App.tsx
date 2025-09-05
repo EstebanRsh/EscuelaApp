@@ -19,7 +19,6 @@ function App() {
 
         <Route element={<ProtectedRoutes />}>
           <Route element={<MainLayout />}>
-            <Route path="/nativo" element={<Nativo />} />
             <Route path="/virtualizado" element={<Virtualizado />} />
           </Route>
         </Route>

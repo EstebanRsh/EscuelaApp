@@ -1,33 +1,23 @@
-/** Renderiza una lista virtualizada con altura fija y filas de 35px.
+import React, { useCallback, useState } from "react";
 
-Cuando el scroll llega cerca del final, se dispara la carga de más datos.
+type Props = {};
 
-Solo se renderizan las filas visibles, aunque tengamos miles de usuarios en data.
+function Virtualizado({}: Props) {
+  console.log("Renderizando Virtualizado");
+  const [count, setCount] = useState(0);
 
-Los encabezados son fijos arriba (están fuera del List).
+  // esta funcion se "redefine" en cada render
+  // => nueva referencia en memoria
+  const handleClick = useCallback(() => {
+    setCount(count + 1); // Acumulador
+  }, []);
 
-El usuario ve una experiencia fluida y la app escala sin problemas. */
-
-import { useEffect, useState, useRef, useCallback } from "react";
-import { FixedSizeList as List, type ListChildComponentProps } from "react-window";
-
-type User = {
-  id: number;
-  username: string;
-  first_name: string;
-  last_name: string;
-  type: string;
-  email: string;
-  [key: string]: any;
-};
-
-function Virtualizado() {
-  
   return (
-    <div style={{ padding: 20 }}>
-      <h2>Infinite Virtualizado</h2>
-
-      </div>
+    <div className="conteiner m-5">
+      <h2>Virtualizado</h2>
+      <p>Count: {count}</p>
+      <button onClick={handleClick}>Incrementar</button>
+    </div>
   );
 }
 

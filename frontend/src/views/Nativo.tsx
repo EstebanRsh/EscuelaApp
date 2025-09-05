@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import DataView from "../components/tablas/DataView";
 
 type User = {
   id: number;
@@ -28,6 +29,8 @@ function Nativo() {
     if (loadingRef.current) return;
     loadingRef.current = true;
 
+    setLoading(true);
+
     try {
       const res = await fetch(URL, {
         method: "POST",
@@ -56,7 +59,7 @@ function Nativo() {
     } catch (err) {
       console.error("Fetch error:", err);
     } finally {
-      loadingRef.current = false;
+      setLoadidng(false);
     }
   }
 
@@ -70,11 +73,8 @@ function Nativo() {
     if (!scrollContainerRef.current || loadingRef.current || !nextCursor)
       return;
 
-    const {
-      scrollTop,
-      scrollHeight,
-      clientHeight,
-    } = scrollContainerRef.current;
+    const { scrollTop, scrollHeight, clientHeight } =
+      scrollContainerRef.current;
 
     if (scrollHeight - scrollTop - clientHeight < 100) {
       getUsersPag(20, nextCursor);
@@ -95,29 +95,9 @@ function Nativo() {
           marginTop: 10,
         }}
       >
-        <table
-          className="table-primary"
-          style={{ width: "100%", borderCollapse: "collapse" }}
-        >
-          <thead>
-            <tr>
-              <th>NOMBRE</th>
-              <th>APELLIDO</th>
-              <th>TIPO</th>
-              <th>EMAIL</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.map((user) => (
-              <tr key={user.id}>
-                <td>{user.first_name}</td>
-                <td>{user.last_name}</td>
-                <td>{user.type}</td>
-                <td>{user.email}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <tbody>
+          <DataView />
+        </tbody>
 
         {/* usamos directamente loadingRef.current para la UI */}
         {loadingRef.current && (
